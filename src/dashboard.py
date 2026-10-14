@@ -4,39 +4,66 @@ import plotly.express as px
 from sqlalchemy import create_engine
 
 # Configuração da conexão com o PostgreSQL no Docker
-engine = create_engine('postgresql://postgres:sua_senha@localhost:5432/postgres')
+DB_USER = "postgres"
+DB_PASS = "sua_senha"
+DB_HOST = "localhost"
+DB_PORT = "5432"
+DB_NAME = "postgres"
 
-# Função para carregar dados de uma view
+DATABASE_URL = f"postgresql://{DB_USER}:{DB_PASS}@{DB_HOST}:{DB_PORT}/{DB_NAME}"
+engine = create_engine(DATABASE_URL)
+
+@st.cache_data
 def load_data(view_name):
-    return pd.read_sql(f"SELECT * FROM {view_name}", engine)
+    query = f"SELECT * FROM {view_name}"
+    return pd.read_sql(query, engine)
 
-# Título do dashboard
-st.title('Dashboard de Temperaturas IoT')
-st.markdown('Monitorização de leituras de temperatura de dispositivos IoT processadas via PostgreSQL e Docker.')
+st.title("📊 Dashboard de Monitoramento IoT - UniFECAF")
+st.markdown("Análise de dados de temperatura extraídos de sensores IoT e processados via PostgreSQL e Streamlit.")
 
-# Gráfico 1: Média de temperatura por dispositivo
-st.header('Média de Temperatura por Dispositivo')
+# 1. Gráfico: Temperatura Média por Ambiente (Dentro vs Fora)
+st.header("🌡️ Temperatura Média: Dentro (In) vs Fora (Out)")
 try:
-    df_avg_temp = load_data('avg_temp_por_dispositivo')
-    fig1 = px.bar(df_avg_temp, x='device_id', y='avg_temp', labels={'device_id': 'Dispositivo/Sala', 'avg_temp': 'Temperatura Média'})
-    st.plotly_chart(fig1, use_container_width=True)
+    df_ambiente = load_data("temp_por_ambiente")
+    fig_ambiente = px.bar(
+        df_ambiente, 
+        x="ambiente", 
+        y="avg_temp", 
+        color="ambiente",
+        labels={"ambiente": "Ambiente", "avg_temp": "Temperatura Média (°C)"},
+        text_auto=".2f"
+    )
+    st.plotly_chart(fig_ambiente, use_container_width=True)
 except Exception as e:
-    st.error(f"Erro ao carregar os dados da view avg_temp_por_dispositivo: {e}")
+    st.warning("A view 'temp_por_ambiente' ainda não foi criada no DBeaver.")
 
-# Gráfico 2: Contagem de leituras por hora
-st.header('Leituras por Hora do Dia')
+# 2. Gráfico: Leituras por Hora
+st.header("⏰ Volume de Leituras por Hora do Dia")
 try:
-    df_leituras_hora = load_data('leituras_por_hora')
-    fig2 = px.line(df_leituras_hora, x='hora', y='contagem', markers=True, labels={'hora': 'Hora do Dia', 'contagem': 'Número de Leituras'})
-    st.plotly_chart(fig2, use_container_width=True)
+    df_horas = load_data("leituras_por_hora")
+    fig_horas = px.line(
+        df_horas, 
+        x="hora", 
+        y="total_leituras", 
+        markers=True,
+        labels={"hora": "Hora do Dia", "total_leituras": "Total de Leituras"}
+    )
+    st.plotly_chart(fig_horas, use_container_width=True)
 except Exception as e:
-    st.error(f"Erro ao carregar os dados da view leituras_por_hora: {e}")
+    st.warning("Erro ao carregar dados de leituras por hora.")
 
-# Gráfico 3: Temperaturas máximas e mínimas por dia
-st.header('Temperaturas Máximas e Mínimas por Dia')
+# 3. Gráfico: Temperaturas Máximas e Mínimas por Dia
+st.header("📈 Temperaturas Máximas e Mínimas por Dia")
 try:
-    df_temp_max_min = load_data('temp_max_min_por_dia')
-    fig3 = px.line(df_temp_max_min, x='data', y=['temp_max', 'temp_min'], markers=True, labels={'data': 'Data', 'value': 'Temperatura', 'variable': 'Métrica'})
-    st.plotly_chart(fig3, use_container_width=True)
+    df_dias = load_data("temp_max_min_por_dia")
+    # Ajustando formato caso tenha colunas de max e min
+    fig_dias = px.line(
+        df_dias, 
+        x="data", 
+        y=["temp_max", "temp_min"], 
+        markers=True,
+        labels={"value": "Temperatura (°C)", "data": "Data", "variable": "Métrica"}
+    )
+    st.plotly_chart(fig_dias, use_container_width=True)
 except Exception as e:
-    st.error(f"Erro ao carregar os dados da view temp_max_min_por_dia: {e}")
+    st.warning("Erro ao carregar dados diários.")
