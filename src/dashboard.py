@@ -56,7 +56,6 @@ except Exception as e:
 st.header("📈 Temperaturas Máximas e Mínimas por Dia")
 try:
     df_dias = load_data("temp_max_min_por_dia")
-    # Ajustando formato caso tenha colunas de max e min
     fig_dias = px.line(
         df_dias, 
         x="data", 
@@ -67,3 +66,24 @@ try:
     st.plotly_chart(fig_dias, use_container_width=True)
 except Exception as e:
     st.warning("Erro ao carregar dados diários.")
+
+# 4. Gráfico: Temperatura Média por Dispositivo
+st.header("📊 Temperatura Média por Dispositivo")
+try:
+    df_disp = load_data("avg_temp_por_dispositivo")
+    
+    # Identifica dinamicamente as colunas de ID e temperatura
+    col_id = [c for c in df_disp.columns if c in ['id', 'room_id', 'noted_by', 'dispositivo']][0] if any(c in df_disp.columns for c in ['id', 'room_id', 'noted_by', 'dispositivo']) else df_disp.columns[0]
+    col_temp = [c for c in df_disp.columns if 'temp' in c or 'avg' in c][0] if any('temp' in c or 'avg' in c for c in df_disp.columns) else df_disp.columns[1]
+
+    fig_disp = px.bar(
+        df_disp, 
+        x=col_id, 
+        y=col_temp, 
+        color=col_id,
+        labels={col_id: "Dispositivo / Sensor", col_temp: "Temperatura Média (°C)"},
+        text_auto=".2f"
+    )
+    st.plotly_chart(fig_disp, use_container_width=True)
+except Exception as e:
+    st.warning(f"Erro ao carregar dados de temperatura por dispositivo: {e}")
